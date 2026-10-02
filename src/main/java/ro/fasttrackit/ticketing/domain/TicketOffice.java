@@ -18,7 +18,9 @@ public class TicketOffice {
 
     public TicketOffice(List<Event> events) {
         this.events = events.stream()
-                .collect(Collectors.toMap(Event::getId, Function.identity(), (first, second) -> second, LinkedHashMap::new));
+                .collect(Collectors.toMap(Event::getId, Function.identity(), (first, second) -> {
+                    throw new IllegalArgumentException("Duplicate event id " + first.getId());
+                }, LinkedHashMap::new));
     }
 
     public BookingResult book(BookingRequest request) {

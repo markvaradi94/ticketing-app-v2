@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -89,10 +90,20 @@ class TicketOfficeTest {
     void secondBookingAddsToBookedSeats() {
         TicketOffice office = new TicketOffice(List.of(event("e1", 100, 0)));
 
-        office.book(new BookingRequest("e1", "ana@mail.ro", 2));
-        office.book(new BookingRequest("e1", "ion@mail.ro", 3));
+        BookingResult first = office.book(new BookingRequest("e1", "ana@mail.ro", 2));
+        BookingResult second = office.book(new BookingRequest("e1", "ion@mail.ro", 3));
 
+        assertInstanceOf(BookingResult.Confirmed.class, first);
+        assertInstanceOf(BookingResult.Confirmed.class, second);
         assertEquals(5, office.findEvent("e1").orElseThrow().getBookedSeats());
+    }
+
+    @Test
+    void duplicateEventIdsAreRejected() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> new TicketOffice(List.of(event("e1", 100, 0), event("e1", 50, 0))));
+
+        assertTrue(exception.getMessage().contains("e1"));
     }
 
     @Test
@@ -178,6 +189,13 @@ class TicketOfficeTest {
                 event("e3", "Play", "Iasi", NOW.plusDays(1), 100, 0)));
 
         assertEquals(List.of("e1"), ids(office.upcomingEventsIn("cluj", NOW)));
+    }
+
+    @Test
+    void upcomingEventsExcludesEventStartingNow() {
+        TicketOffice office = new TicketOffice(List.of(event("e1", "Concert", "Cluj", NOW, 100, 0)));
+
+        assertTrue(office.upcomingEventsIn("Cluj", NOW).isEmpty());
     }
 
     @Test
