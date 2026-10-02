@@ -1,5 +1,7 @@
 plugins {
     java
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
 }
 
 group = "ro.fasttrackit.ticketing"
@@ -15,11 +17,12 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.spring.boot.starter.webmvc)
+    implementation(libs.spring.boot.starter.validation)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.spring.boot.starter.webmvc.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
