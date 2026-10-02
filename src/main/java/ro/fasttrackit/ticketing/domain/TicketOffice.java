@@ -56,6 +56,10 @@ public class TicketOffice {
         return Optional.ofNullable(events.get(id));
     }
 
+    public List<Event> allEvents() {
+        return events.values().stream().toList();
+    }
+
     public List<Event> eventsWithFreeSeats() {
         return events.values().stream()
                 .filter(event -> event.availableSeats() > 0)

@@ -129,6 +129,13 @@ class TicketOfficeTest {
     }
 
     @Test
+    void allEventsReturnsEveryEventInCreationOrder() {
+        TicketOffice office = new TicketOffice(List.of(event("e1", 100, 0), event("e2", 10, 10)));
+
+        assertEquals(List.of("e1", "e2"), ids(office.allEvents()));
+    }
+
+    @Test
     void eventsWithFreeSeatsSkipsFullEvents() {
         TicketOffice office = new TicketOffice(List.of(event("e1", 10, 5), event("e2", 10, 10)));
 

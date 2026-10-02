@@ -1,0 +1,8 @@
+### All events (start the app with the dev profile first)
+GET http://localhost:8080/events
+
+### One event
+GET http://localhost:8080/events/rock-cluj
+
+### Unknown event: 404 application/problem+json
+GET http://localhost:8080/events/nope
