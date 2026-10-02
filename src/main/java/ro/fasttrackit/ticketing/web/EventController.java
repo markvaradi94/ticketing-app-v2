@@ -3,7 +3,6 @@ package ro.fasttrackit.ticketing.web;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +19,8 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @RestController
 @RequestMapping("/events")
@@ -45,7 +46,7 @@ public class EventController {
     public EventResponse event(@PathVariable String id) {
         return ticketOffice.findEvent(id)
                 .map(EventResponse::from)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No event with id " + id));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "No event with id " + id));
     }
 
     @PostMapping

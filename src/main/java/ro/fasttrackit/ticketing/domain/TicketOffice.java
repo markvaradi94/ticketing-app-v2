@@ -8,19 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class TicketOffice {
 
-    private final Map<String, Event> events;
+    private final Map<String, Event> events = new LinkedHashMap<>();
     private final List<Booking> bookings = new ArrayList<>();
 
     public TicketOffice(List<Event> events) {
-        this.events = events.stream()
-                .collect(Collectors.toMap(Event::getId, Function.identity(), (first, second) -> {
-                    throw new IllegalArgumentException("Duplicate event id " + first.getId());
-                }, LinkedHashMap::new));
+        events.forEach(this::add);
     }
 
     public BookingResult book(BookingRequest request) {
@@ -28,7 +24,8 @@ public class TicketOffice {
         if (event == null) {
             return new BookingResult.UnknownEvent(request.eventId());
         }
-        if (!event.getStartsAt().isAfter(LocalDateTime.now())) {
+        LocalDateTime now = LocalDateTime.now();
+        if (!event.getStartsAt().isAfter(now)) {
             return new BookingResult.AlreadyStarted(event.getId(), event.getStartsAt());
         }
         if (request.seats() > event.availableSeats()) {
@@ -45,7 +42,7 @@ public class TicketOffice {
                 .eventId(event.getId())
                 .customerEmail(request.customerEmail())
                 .seats(request.seats())
-                .bookedAt(LocalDateTime.now())
+                .bookedAt(now)
                 .build();
         bookings.add(booking);
 
@@ -53,6 +50,10 @@ public class TicketOffice {
     }
 
     public void addEvent(Event event) {
+        add(event);
+    }
+
+    private void add(Event event) {
         if (events.putIfAbsent(event.getId(), event) != null) {
             throw new IllegalArgumentException("Duplicate event id " + event.getId());
         }
