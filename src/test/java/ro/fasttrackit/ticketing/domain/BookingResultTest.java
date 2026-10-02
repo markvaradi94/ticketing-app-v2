@@ -33,4 +33,11 @@ class BookingResultTest {
     void describesUnknownEvent() {
         assertEquals("No event with id e9", new BookingResult.UnknownEvent("e9").describe());
     }
+
+    @Test
+    void describesAlreadyStarted() {
+        BookingResult result = new BookingResult.AlreadyStarted("e1", LocalDateTime.of(2026, 10, 1, 19, 0));
+
+        assertEquals("Event e1 already started at 2026-10-01T19:00", result.describe());
+    }
 }
