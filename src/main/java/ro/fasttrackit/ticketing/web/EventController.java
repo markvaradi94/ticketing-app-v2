@@ -30,7 +30,7 @@ public class EventController {
 
     @GetMapping
     public List<EventResponse> allEvents(@RequestParam(required = false) String city) {
-        List<Event> events = city == null
+        List<Event> events = city == null || city.isBlank()
                 ? ticketOffice.allEvents()
                 : ticketOffice.upcomingEventsIn(city, LocalDateTime.now());
         return toResponses(events);

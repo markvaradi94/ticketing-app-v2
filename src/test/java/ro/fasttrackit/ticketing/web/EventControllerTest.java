@@ -19,6 +19,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -130,6 +131,41 @@ class EventControllerTest {
 
         verify(ticketOffice).allEvents();
         verify(ticketOffice, never()).upcomingEventsIn(any(), any());
+    }
+
+    @Test
+    void blankCityListsAllEvents() throws Exception {
+        when(ticketOffice.allEvents()).thenReturn(List.of(
+                event("e1", "Concert", "Cluj", LocalDateTime.of(2030, 6, 12, 20, 0), 100, 30)));
+
+        mockMvc.perform(get("/events").param("city", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value("e1"));
+
+        verify(ticketOffice).allEvents();
+        verify(ticketOffice, never()).upcomingEventsIn(any(), any());
+    }
+
+    @Test
+    void topWithoutNReturnsThreeEvents() throws Exception {
+        when(ticketOffice.topEventsByBookedSeats(3)).thenReturn(List.of());
+
+        mockMvc.perform(get("/events/top"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        verify(ticketOffice).topEventsByBookedSeats(3);
+    }
+
+    @Test
+    void topWithZeroNIsBadRequestProblemDetail() throws Exception {
+        mockMvc.perform(get("/events/top").param("n", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(400));
+
+        verify(ticketOffice, never()).topEventsByBookedSeats(anyInt());
     }
 
     @Test
