@@ -34,6 +34,12 @@ class TicketingConfigTest {
             assertEquals(List.of("rock-cluj", "jazz-cluj", "opera-iasi"), events.stream().map(Event::getId).toList());
             assertTrue(events.stream().allMatch(event -> event.getBookedSeats() == 0));
             assertTrue(events.stream().allMatch(event -> event.getStartsAt().getYear() == 2030));
+
+            Event opera = ticketOffice.findEvent("opera-iasi").orElseThrow();
+            assertEquals("La Traviata", opera.getName());
+            assertEquals("Iasi National Opera", opera.getVenue().name());
+            assertEquals("Iasi", opera.getVenue().city());
+            assertEquals(350, opera.getCapacity());
         }
     }
 
