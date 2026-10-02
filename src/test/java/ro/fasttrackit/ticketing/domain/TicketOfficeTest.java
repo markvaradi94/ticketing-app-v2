@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -212,5 +213,44 @@ class TicketOfficeTest {
                 event("e2", "Festival", "Cluj", NOW.plusDays(1), 100, 0)));
 
         assertEquals(List.of("e2", "e1"), ids(office.upcomingEventsIn("Cluj", NOW)));
+    }
+
+    @Test
+    void addedEventIsListedAndFound() {
+        TicketOffice office = new TicketOffice(List.of(event("e1", 100, 0)));
+        Event added = event("e2", 50, 0);
+
+        office.addEvent(added);
+
+        assertEquals(List.of("e1", "e2"), ids(office.allEvents()));
+        assertEquals(Optional.of(added), office.findEvent("e2"));
+    }
+
+    @Test
+    void addingDuplicateEventIdIsRejected() {
+        TicketOffice office = new TicketOffice(List.of(event("e1", 100, 10)));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> office.addEvent(event("e1", 50, 0)));
+
+        assertTrue(exception.getMessage().contains("e1"));
+        assertEquals(100, office.findEvent("e1").orElseThrow().getCapacity());
+    }
+
+    @Test
+    void confirmedBookingIsFoundById() {
+        TicketOffice office = new TicketOffice(List.of(event("e1", 100, 0)));
+        Booking booking = assertInstanceOf(BookingResult.Confirmed.class,
+                office.book(new BookingRequest("e1", "ana@mail.ro", 2))).booking();
+
+        assertEquals(Optional.of(booking), office.findBooking(booking.getId()));
+    }
+
+    @Test
+    void unknownBookingIdIsEmpty() {
+        TicketOffice office = new TicketOffice(List.of(event("e1", 100, 0)));
+        office.book(new BookingRequest("e1", "ana@mail.ro", 2));
+
+        assertEquals(Optional.empty(), office.findBooking("b9"));
     }
 }
