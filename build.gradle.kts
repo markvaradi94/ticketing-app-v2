@@ -34,12 +34,3 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
-
-// Spike (session 4, entry 1): show the overbooking race's measurements in the build log, locally and in CI.
-tasks.test {
-    addTestOutputListener { descriptor, event ->
-        if (descriptor.className?.endsWith("OverbookingRaceTest") == true && event.message.startsWith("RACE")) {
-            logger.lifecycle(event.message.trimEnd())
-        }
-    }
-}
