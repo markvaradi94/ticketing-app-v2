@@ -5,9 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -22,13 +21,12 @@ import java.util.UUID;
  * Gives every request a correlation id: the client's {@code X-Correlation-Id}, or a new one. The id goes to the
  * service with the forwarded request, back to the client in the response, and into this gateway's logs.
  */
+@Slf4j
 @Component
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
     public static final String HEADER = "X-Correlation-Id";
     public static final String MDC_KEY = "correlationId";
-
-    private static final Logger log = LoggerFactory.getLogger(CorrelationIdFilter.class);
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,

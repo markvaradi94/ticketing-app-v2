@@ -28,6 +28,8 @@ dependencies {
     implementation(libs.bucket4j.core)
     implementation(libs.bucket4j.caffeine)
     implementation(libs.caffeine)
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 
     testImplementation(libs.spring.boot.starter.test)
     testRuntimeOnly(libs.junit.platform.launcher)
