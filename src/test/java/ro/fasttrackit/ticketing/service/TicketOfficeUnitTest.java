@@ -26,7 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit test (no Spring, no Docker): {@link TicketOffice} built on in-memory fakes of its ports. A confirmed booking
- * publishes exactly one {@link BookingConfirmed}; every rejected booking publishes nothing.
+ * publishes exactly one {@link BookingConfirmed}; every rejected booking publishes nothing. The fake event store
+ * honours the port's versioned {@code trySave}; a lost race is staged as another writer booking just before the
+ * next save, so the service's stale copy loses on its version.
  */
 class TicketOfficeUnitTest {
 
@@ -92,7 +94,8 @@ class TicketOfficeUnitTest {
     @Test
     void twoLostRacesAreAConflictThatPublishesNothing() {
         events.add(event("e1", IN_A_WEEK, 10, 0));
-        events.saveOutcomes.addAll(List.of(false, false));
+        events.anotherWriterBooksBeforeNextSave("e1", 1);
+        events.anotherWriterBooksBeforeNextSave("e1", 1);
 
         BookingResult result = office.book(new BookingRequest("e1", "ana@example.com", 2));
 
@@ -104,31 +107,70 @@ class TicketOfficeUnitTest {
     @Test
     void retryAfterOneLostRacePublishesExactlyOnce() {
         events.add(event("e1", IN_A_WEEK, 10, 0));
-        events.saveOutcomes.addAll(List.of(false, true));
+        events.anotherWriterBooksBeforeNextSave("e1", 1);
 
         BookingResult result = office.book(new BookingRequest("e1", "ana@example.com", 2));
 
         Booking booking = assertInstanceOf(BookingResult.Confirmed.class, result).booking();
-        assertEquals(List.of(BookingConfirmed.from(booking)), publisher.published);
+        assertEquals(List.of(new BookingConfirmed(
+                booking.getId(), "e1", "ana@example.com", 2, booking.getBookedAt())), publisher.published);
         assertEquals(1, bookings.stored.size());
+        assertEquals(3, events.findById("e1").orElseThrow().getBookedSeats());
     }
 
-    /** Events in a map. {@code trySave} takes its answers from {@code saveOutcomes}, then succeeds. */
+    @Test
+    void lostRaceToAWriterWhoTookTheRemainingSeatsIsSoldOutAndPublishesNothing() {
+        events.add(event("e1", IN_A_WEEK, 10, 0));
+        events.anotherWriterBooksBeforeNextSave("e1", 9);
+
+        BookingResult result = office.book(new BookingRequest("e1", "ana@example.com", 2));
+
+        assertEquals(new BookingResult.SoldOut("e1", 1), result);
+        assertTrue(publisher.published.isEmpty());
+        assertTrue(bookings.stored.isEmpty());
+    }
+
+    /**
+     * Events in a map, versioned like the real store: {@code trySave} succeeds only when the event carries the
+     * stored version, and then bumps it. Writes queued with {@link #anotherWriterBooksBeforeNextSave} are applied
+     * to the stored event just before the next {@code trySave}, as if another request had saved first.
+     */
     private static class FakeEventStore implements EventStore {
         private final Map<String, Event> stored = new HashMap<>();
-        private final Deque<Boolean> saveOutcomes = new ArrayDeque<>();
+        private final Deque<Runnable> otherWriters = new ArrayDeque<>();
 
         void add(Event event) {
             insert(event);
         }
 
+        void anotherWriterBooksBeforeNextSave(String eventId, int seats) {
+            otherWriters.add(() -> {
+                Event current = stored.get(eventId);
+                stored.put(eventId, current.toBuilder()
+                        .bookedSeats(current.getBookedSeats() + seats)
+                        .version(current.getVersion() + 1)
+                        .build());
+            });
+        }
+
         @Override
         public boolean trySave(Event event) {
-            boolean saved = saveOutcomes.isEmpty() || saveOutcomes.poll();
-            if (saved) {
-                stored.put(event.getId(), event);
+            if (!otherWriters.isEmpty()) {
+                otherWriters.poll().run();
             }
-            return saved;
+            Event current = stored.get(event.getId());
+            if (event.getVersion() == null) {
+                if (current != null) {
+                    return false;
+                }
+                stored.put(event.getId(), event.toBuilder().version(0L).build());
+                return true;
+            }
+            if (current == null || !event.getVersion().equals(current.getVersion())) {
+                return false;
+            }
+            stored.put(event.getId(), event.toBuilder().version(event.getVersion() + 1).build());
+            return true;
         }
 
         @Override
@@ -143,7 +185,10 @@ class TicketOfficeUnitTest {
 
         @Override
         public void insert(Event event) {
-            stored.put(event.getId(), event);
+            if (stored.containsKey(event.getId())) {
+                throw new IllegalStateException("Duplicate event id " + event.getId());
+            }
+            stored.put(event.getId(), event.getVersion() == null ? event.toBuilder().version(0L).build() : event);
         }
 
         @Override
