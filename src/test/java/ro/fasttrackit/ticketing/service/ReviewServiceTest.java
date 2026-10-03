@@ -1,11 +1,13 @@
 package ro.fasttrackit.ticketing.service;
 
+import org.bson.Document;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -31,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Persistence test (real MongoDB in a Testcontainer, {@code @DataMongoTest} plus the service): checks that
- * {@link ReviewService} stores reviews for known events only, lists them newest first and sums up their ratings with
- * an aggregation.
+ * {@link ReviewService} stores reviews for known events only, lists them newest first, sums up their ratings with
+ * an aggregation, and that the reviews query uses the {@code eventId} index.
  */
 @DataMongoTest
 @Import(ReviewService.class)
@@ -54,6 +56,9 @@ class ReviewServiceTest {
 
     @Autowired
     private ReviewRepository reviewRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     @BeforeEach
     void emptyCollections() {
@@ -172,5 +177,21 @@ class ReviewServiceTest {
     @Test
     void unknownEventHasNoRating() {
         assertEquals(Optional.empty(), reviewService.ratingFor("e9"));
+    }
+
+    @Test
+    void reviewsQueryUsesTheEventIdIndex() {
+        givenReview("r1", "e1", NOW.minusDays(1));
+        givenReview("r2", "e2", NOW.minusDays(1));
+
+        // The same query as ReviewRepository.findByEventIdOrderByCreatedAtDesc.
+        Document plan = mongoTemplate.getCollection("reviews")
+                .find(new Document("eventId", "e1"))
+                .sort(new Document("createdAt", -1))
+                .explain();
+        String winningPlan = plan.get("queryPlanner", Document.class).get("winningPlan", Document.class).toJson();
+
+        assertTrue(winningPlan.contains("\"IXSCAN\""),
+                "expected an IXSCAN (is @Indexed on ReviewDocument.eventId and auto-index-creation on?), got " + winningPlan);
     }
 }
