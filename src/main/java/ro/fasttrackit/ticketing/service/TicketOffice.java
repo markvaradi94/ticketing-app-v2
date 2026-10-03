@@ -3,9 +3,11 @@ package ro.fasttrackit.ticketing.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ro.fasttrackit.ticketing.domain.Booking;
+import ro.fasttrackit.ticketing.domain.BookingConfirmed;
 import ro.fasttrackit.ticketing.domain.BookingRequest;
 import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
+import ro.fasttrackit.ticketing.service.port.BookingEventPublisher;
 import ro.fasttrackit.ticketing.service.port.BookingStore;
 import ro.fasttrackit.ticketing.service.port.EventStore;
 
@@ -23,6 +25,7 @@ public class TicketOffice {
 
     private final EventStore events;
     private final BookingStore bookings;
+    private final BookingEventPublisher publisher;
 
     // A lost race is retried once with a fresh read; a second loss is reported as a Conflict.
     public BookingResult book(BookingRequest request) {
@@ -61,6 +64,8 @@ public class TicketOffice {
                 .bookedAt(now)
                 .build();
         bookings.save(booking);
+        // Published once, after the save: a Conflict returns above, before anything is saved or published.
+        publisher.publish(BookingConfirmed.from(booking));
 
         return new BookingResult.Confirmed(booking);
     }

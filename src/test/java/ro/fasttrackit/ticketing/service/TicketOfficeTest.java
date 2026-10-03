@@ -16,6 +16,7 @@ import ro.fasttrackit.ticketing.domain.BookingRequest;
 import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
+import ro.fasttrackit.ticketing.messaging.LoggingBookingEventPublisher;
 import ro.fasttrackit.ticketing.persistence.BookingRepository;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
@@ -41,10 +42,10 @@ import static org.mockito.Mockito.doAnswer;
 
 /**
  * Persistence test (real MongoDB in a Testcontainer, {@code @DataMongoTest} plus the service): checks the booking
- * rules and the queries in {@link TicketOffice} against the repositories.
+ * rules and the queries in {@link TicketOffice} through the MongoDB adapters.
  */
 @DataMongoTest
-@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class})
+@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class, LoggingBookingEventPublisher.class})
 @Testcontainers
 class TicketOfficeTest {
 
