@@ -25,7 +25,7 @@ public class NotificationService {
      * Stores the booking's notification once. Delivery is at-least-once, so the same booking can arrive again: the
      * insert then fails on the booking id, and that means the work is already done.
      */
-    public void notify(BookingConfirmed event) {
+    public void store(BookingConfirmed event) {
         Notification notification = new Notification(
                 event.bookingId(),
                 event.customerEmail(),

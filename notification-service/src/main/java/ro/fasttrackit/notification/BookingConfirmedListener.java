@@ -20,6 +20,6 @@ public class BookingConfirmedListener {
         if (!event.isValid()) {
             throw new AmqpRejectAndDontRequeueException("Invalid BookingConfirmed: " + event.bookingId());
         }
-        notificationService.notify(event);
+        notificationService.store(event);
     }
 }
