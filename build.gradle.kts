@@ -19,10 +19,15 @@ repositories {
 dependencies {
     implementation(libs.spring.boot.starter.webmvc)
     implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.data.mongodb)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
     testImplementation(libs.spring.boot.starter.webmvc.test)
+    testImplementation(libs.spring.boot.starter.data.mongodb.test)
+    testImplementation(libs.spring.boot.testcontainers)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.mongodb)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
