@@ -24,10 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test ({@code @SpringBootTest}, full Spring context on a MongoDB Testcontainer): checks that
- * {@link TicketingConfig} seeds the events under the {@code dev} profile only when the collection is empty,
+ * {@link DevDataSeeder} seeds the events under the {@code dev} profile only when the collection is empty,
  * and seeds nothing under the default profile. Each profile gets its own container, so they don't share data.
  */
-class TicketingConfigTest {
+class DevDataSeederTest {
 
     @Nested
     @SpringBootTest
@@ -43,7 +43,7 @@ class TicketingConfigTest {
         private TicketOffice ticketOffice;
 
         @Autowired
-        private TicketingConfig seeder;
+        private DevDataSeeder seeder;
 
         @Autowired
         private EventRepository eventRepository;
