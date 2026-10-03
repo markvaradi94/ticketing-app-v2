@@ -7,6 +7,7 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -15,6 +16,7 @@ import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
 import ro.fasttrackit.ticketing.service.TicketOffice;
+import ro.fasttrackit.ticketing.service.port.BookingEventPublisher;
 
 import java.util.List;
 
@@ -38,6 +40,10 @@ class DevDataSeederTest {
         @Container
         @ServiceConnection
         static MongoDBContainer mongo = new MongoDBContainer("mongo:8.0");
+
+        // The test books once; publishing is tested on its own, so no broker is needed here.
+        @MockitoBean
+        private BookingEventPublisher publisher;
 
         @Autowired
         private TicketOffice ticketOffice;
