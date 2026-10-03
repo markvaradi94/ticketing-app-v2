@@ -46,7 +46,7 @@ public class IdentityTokens {
                 .build();
     }
 
-    String tokenFor(URI audience) {
+    private String tokenFor(URI audience) {
         Token token = tokens.get(audience);
         if (token == null || token.fetchedAt().plus(REUSE_FOR).isBefore(Instant.now())) {
             token = new Token(fetch(audience), Instant.now());
