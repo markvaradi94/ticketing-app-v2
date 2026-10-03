@@ -19,6 +19,8 @@ import ro.fasttrackit.ticketing.domain.Venue;
 import ro.fasttrackit.ticketing.persistence.BookingRepository;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
+import ro.fasttrackit.ticketing.persistence.MongoBookingStore;
+import ro.fasttrackit.ticketing.persistence.MongoEventStore;
 import ro.fasttrackit.ticketing.web.CreateEventRequest;
 
 import java.time.LocalDateTime;
@@ -42,7 +44,7 @@ import static org.mockito.Mockito.doAnswer;
  * rules and the queries in {@link TicketOffice} against the repositories.
  */
 @DataMongoTest
-@Import(TicketOffice.class)
+@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class})
 @Testcontainers
 class TicketOfficeTest {
 

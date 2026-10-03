@@ -1,20 +1,13 @@
 package ro.fasttrackit.ticketing.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import ro.fasttrackit.ticketing.domain.Booking;
 import ro.fasttrackit.ticketing.domain.BookingRequest;
 import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
-import ro.fasttrackit.ticketing.persistence.BookingDocument;
-import ro.fasttrackit.ticketing.persistence.BookingRepository;
-import ro.fasttrackit.ticketing.persistence.EventDocument;
-import ro.fasttrackit.ticketing.persistence.EventRepository;
+import ro.fasttrackit.ticketing.service.port.BookingStore;
+import ro.fasttrackit.ticketing.service.port.EventStore;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -23,15 +16,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TicketOffice {
 
-    private final EventRepository events;
-    private final BookingRepository bookings;
-    private final MongoTemplate mongoTemplate;
+    private final EventStore events;
+    private final BookingStore bookings;
 
     // A lost race is retried once with a fresh read; a second loss is reported as a Conflict.
     public BookingResult book(BookingRequest request) {
@@ -43,11 +34,10 @@ public class TicketOffice {
     }
 
     private BookingResult tryToBook(BookingRequest request) {
-        EventDocument doc = events.findById(request.eventId()).orElse(null);
-        if (doc == null) {
+        Event event = events.findById(request.eventId()).orElse(null);
+        if (event == null) {
             return new BookingResult.UnknownEvent(request.eventId());
         }
-        Event event = doc.toDomain();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
         if (!event.getStartsAt().isAfter(now)) {
             return new BookingResult.AlreadyStarted(event.getId(), event.getStartsAt());
@@ -59,9 +49,7 @@ public class TicketOffice {
         Event updated = event.toBuilder()
                 .bookedSeats(event.getBookedSeats() + request.seats())
                 .build();
-        try {
-            events.save(EventDocument.from(updated));
-        } catch (OptimisticLockingFailureException lostTheRace) {
+        if (!events.trySave(updated)) {
             return new BookingResult.Conflict(event.getId());
         }
 
@@ -72,7 +60,7 @@ public class TicketOffice {
                 .seats(request.seats())
                 .bookedAt(now)
                 .build();
-        bookings.save(BookingDocument.from(booking));
+        bookings.save(booking);
 
         return new BookingResult.Confirmed(booking);
     }
@@ -81,20 +69,19 @@ public class TicketOffice {
         if (events.existsById(event.getId())) {
             throw new IllegalArgumentException("Duplicate event id " + event.getId());
         }
-        events.insert(EventDocument.from(event));
+        events.insert(event);
     }
 
     public Optional<Booking> findBooking(String id) {
-        return bookings.findById(id).map(BookingDocument::toDomain);
+        return bookings.findById(id);
     }
 
     public Optional<Event> findEvent(String id) {
-        return events.findById(id).map(EventDocument::toDomain);
+        return events.findById(id);
     }
 
     public List<Event> allEvents() {
         return events.findAll().stream()
-                .map(EventDocument::toDomain)
                 .sorted(Comparator.comparing(Event::getStartsAt))
                 .toList();
     }
@@ -106,11 +93,7 @@ public class TicketOffice {
     }
 
     public Map<String, Integer> bookedSeatsPerEvent() {
-        Aggregation pipeline = Aggregation.newAggregation(
-                Aggregation.group("eventId").sum("seats").as("seats"));
-        return mongoTemplate.aggregate(pipeline, BookingDocument.class, SeatsPerEvent.class)
-                .getMappedResults().stream()
-                .collect(Collectors.toMap(SeatsPerEvent::id, SeatsPerEvent::seats));
+        return bookings.bookedSeatsPerEvent();
     }
 
     public List<Event> topEventsByBookedSeats(int n) {
@@ -118,28 +101,16 @@ public class TicketOffice {
             throw new IllegalArgumentException("n must not be negative: " + n);
         }
         if (n == 0) {
-            // Query.limit(0) means "no limit", so zero events is answered here.
+            // A store query with limit 0 may mean "no limit", so zero events is answered here.
             return List.of();
         }
-        Query query = new Query()
-                .with(Sort.by(Sort.Direction.DESC, "bookedSeats")
-                        .and(Sort.by(Sort.Direction.ASC, "name"))
-                        .and(Sort.by(Sort.Direction.ASC, "_id")))
-                .limit(n);
-        return mongoTemplate.find(query, EventDocument.class).stream()
-                .map(EventDocument::toDomain)
-                .toList();
+        return events.topByBookedSeats(n);
     }
 
     public List<Event> upcomingEventsIn(String city, LocalDateTime now) {
-        return events.findByVenueCityIgnoreCase(city).stream()
-                .map(EventDocument::toDomain)
+        return events.findByCityIgnoreCase(city).stream()
                 .filter(event -> event.getStartsAt().isAfter(now))
                 .sorted(Comparator.comparing(Event::getStartsAt))
                 .toList();
-    }
-
-    // One $group result: the event id (MongoDB's _id) and the summed seats.
-    private record SeatsPerEvent(String id, int seats) {
     }
 }

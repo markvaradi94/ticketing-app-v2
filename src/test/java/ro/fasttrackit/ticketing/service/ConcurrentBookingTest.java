@@ -17,6 +17,8 @@ import ro.fasttrackit.ticketing.persistence.BookingDocument;
 import ro.fasttrackit.ticketing.persistence.BookingRepository;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
+import ro.fasttrackit.ticketing.persistence.MongoBookingStore;
+import ro.fasttrackit.ticketing.persistence.MongoEventStore;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -37,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link EventDocument} and it fails.
  */
 @DataMongoTest
-@Import(TicketOffice.class)
+@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class})
 @Testcontainers
 class ConcurrentBookingTest {
 
