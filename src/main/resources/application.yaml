@@ -1,9 +1,6 @@
 spring:
   application:
     name: ticketing
-  data:
-    mongodb:
-      auto-index-creation: true
   mvc:
     problemdetails:
       enabled: true

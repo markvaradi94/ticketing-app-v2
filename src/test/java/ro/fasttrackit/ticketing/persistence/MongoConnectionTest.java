@@ -5,13 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Persistence test (real MongoDB in a Testcontainer): checks that the app can write to and read from MongoDB,
@@ -38,12 +36,4 @@ class MongoConnectionTest {
         assertEquals(new Ping("p1", "hello"), mongoTemplate.findById("p1", Ping.class));
     }
 
-    @Test
-    void eventsAreIndexedByVenueCity() {
-        mongoTemplate.save(EventDocument.builder().id("e1").build());
-
-        assertTrue(mongoTemplate.indexOps(EventDocument.class).getIndexInfo().stream()
-                .map(IndexInfo::getIndexFields)
-                .anyMatch(fields -> fields.size() == 1 && fields.getFirst().getKey().equals("venue.city")));
-    }
 }
