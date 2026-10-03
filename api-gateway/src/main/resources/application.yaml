@@ -11,6 +11,10 @@ gateway:
   rate-limit:
     capacity: 20
     period: 10s
+  # On Cloud Run: GATEWAY_CLOUD_RUN_AUTH_ENABLED=true
+  cloud-run-auth:
+    enabled: false
+    metadata-uri: http://metadata.google.internal
 
 management:
   endpoints:

@@ -18,7 +18,7 @@ import static org.springframework.cloud.gateway.server.mvc.predicate.GatewayRequ
 
 /**
  * The gateway's routes, in the Java DSL of Gateway Server WebMVC (not the WebFlux {@code RouteLocatorBuilder}).
- * Every route is rate-limited per client IP.
+ * Every route is rate-limited per client IP, and on Cloud Run carries an identity token for its service.
  */
 @Configuration
 public class Routes {
@@ -31,19 +31,21 @@ public class Routes {
     }
 
     @Bean
-    RouterFunction<ServerResponse> ticketingRoute(GatewayProperties properties) {
+    RouterFunction<ServerResponse> ticketingRoute(GatewayProperties properties, IdentityTokens identityTokens) {
         return route("ticketing")
                 .route(path("/events/**"), http())
                 .before(uri(properties.ticketingUri()))
+                .before(identityTokens.authorizeFor(properties.ticketingUri()))
                 .filter(perClientRateLimit(properties.rateLimit()))
                 .build();
     }
 
     @Bean
-    RouterFunction<ServerResponse> notificationsRoute(GatewayProperties properties) {
+    RouterFunction<ServerResponse> notificationsRoute(GatewayProperties properties, IdentityTokens identityTokens) {
         return route("notifications")
                 .route(path("/notifications/**"), http())
                 .before(uri(properties.notificationsUri()))
+                .before(identityTokens.authorizeFor(properties.notificationsUri()))
                 .filter(perClientRateLimit(properties.rateLimit()))
                 .build();
     }
