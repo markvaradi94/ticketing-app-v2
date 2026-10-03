@@ -84,9 +84,23 @@ Neither backend accepts unauthenticated calls (`--no-allow-unauthenticated`): on
 `notification-service` consumes RabbitMQ and gets no HTTP traffic. By default Cloud Run gives an instance CPU only during a request and scales to zero, so it would never consume. It keeps one instance running with CPU always allocated (`--no-cpu-throttling --min-instances 1`). That instance costs money for as long as it runs: see section 8.
 
 ```bash
-MSYS2_ARG_CONV_EXCL="httpGet.path=" gcloud run deploy notification-service     --image $REPO/notification-service:session-09     --service-account notification-run@$PROJECT_ID.iam.gserviceaccount.com     --no-allow-unauthenticated --port 8082 --cpu 1 --memory 512Mi     --no-cpu-throttling --min-instances 1 --max-instances 1     --set-secrets SPRING_MONGODB_URI=mongodb-uri:latest,SPRING_RABBITMQ_ADDRESSES=cloudamqp-url:latest     --set-env-vars SPRING_MONGODB_DATABASE=notifications     --startup-probe httpGet.path=/actuator/health/readiness,httpGet.port=8082,periodSeconds=5,timeoutSeconds=3,failureThreshold=24
+MSYS2_ARG_CONV_EXCL="httpGet.path=" gcloud run deploy notification-service \
+    --image $REPO/notification-service:session-09 \
+    --service-account notification-run@$PROJECT_ID.iam.gserviceaccount.com \
+    --no-allow-unauthenticated --port 8082 --cpu 1 --memory 512Mi \
+    --no-cpu-throttling --min-instances 1 --max-instances 1 \
+    --set-secrets SPRING_MONGODB_URI=mongodb-uri:latest,SPRING_RABBITMQ_ADDRESSES=cloudamqp-url:latest \
+    --set-env-vars SPRING_MONGODB_DATABASE=notifications \
+    --startup-probe httpGet.path=/actuator/health/readiness,httpGet.port=8082,periodSeconds=5,timeoutSeconds=3,failureThreshold=24
 
-MSYS2_ARG_CONV_EXCL="httpGet.path=" gcloud run deploy ticketing-service     --image $REPO/ticketing-service:session-09     --service-account ticketing-run@$PROJECT_ID.iam.gserviceaccount.com     --no-allow-unauthenticated --port 8081 --cpu 1 --memory 512Mi     --min-instances 0 --max-instances 2     --set-secrets SPRING_MONGODB_URI=mongodb-uri:latest,SPRING_RABBITMQ_ADDRESSES=cloudamqp-url:latest     --set-env-vars SPRING_MONGODB_DATABASE=ticketing,SPRING_PROFILES_ACTIVE=dev     --startup-probe httpGet.path=/actuator/health/readiness,httpGet.port=8081,periodSeconds=5,timeoutSeconds=3,failureThreshold=24
+MSYS2_ARG_CONV_EXCL="httpGet.path=" gcloud run deploy ticketing-service \
+    --image $REPO/ticketing-service:session-09 \
+    --service-account ticketing-run@$PROJECT_ID.iam.gserviceaccount.com \
+    --no-allow-unauthenticated --port 8081 --cpu 1 --memory 512Mi \
+    --min-instances 0 --max-instances 2 \
+    --set-secrets SPRING_MONGODB_URI=mongodb-uri:latest,SPRING_RABBITMQ_ADDRESSES=cloudamqp-url:latest \
+    --set-env-vars SPRING_MONGODB_DATABASE=ticketing,SPRING_PROFILES_ACTIVE=dev \
+    --startup-probe httpGet.path=/actuator/health/readiness,httpGet.port=8081,periodSeconds=5,timeoutSeconds=3,failureThreshold=24
 ```
 
 Check them: without credentials they answer 403, and with your identity token they answer.
