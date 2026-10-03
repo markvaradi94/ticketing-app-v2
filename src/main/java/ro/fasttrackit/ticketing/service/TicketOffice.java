@@ -1,6 +1,9 @@
 package ro.fasttrackit.ticketing.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.stereotype.Service;
 import ro.fasttrackit.ticketing.domain.Booking;
 import ro.fasttrackit.ticketing.domain.BookingRequest;
@@ -26,6 +29,7 @@ public class TicketOffice {
 
     private final EventRepository events;
     private final BookingRepository bookings;
+    private final MongoTemplate mongoTemplate;
 
     public BookingResult book(BookingRequest request) {
         EventDocument doc = events.findById(request.eventId()).orElse(null);
@@ -44,7 +48,11 @@ public class TicketOffice {
         Event updated = event.toBuilder()
                 .bookedSeats(event.getBookedSeats() + request.seats())
                 .build();
-        events.save(EventDocument.from(updated));
+        try {
+            events.save(EventDocument.from(updated));
+        } catch (OptimisticLockingFailureException lostTheRace) {
+            return new BookingResult.Conflict(event.getId());
+        }
 
         Booking booking = Booking.builder()
                 .id(UUID.randomUUID().toString())
@@ -87,9 +95,11 @@ public class TicketOffice {
     }
 
     public Map<String, Integer> bookedSeatsPerEvent() {
-        return bookings.findAll().stream()
-                .map(BookingDocument::toDomain)
-                .collect(Collectors.groupingBy(Booking::getEventId, Collectors.summingInt(Booking::getSeats)));
+        Aggregation pipeline = Aggregation.newAggregation(
+                Aggregation.group("eventId").sum("seats").as("seats"));
+        return mongoTemplate.aggregate(pipeline, BookingDocument.class, SeatsPerEvent.class)
+                .getMappedResults().stream()
+                .collect(Collectors.toMap(SeatsPerEvent::id, SeatsPerEvent::seats));
     }
 
     public List<Event> topEventsByBookedSeats(int n) {
@@ -107,5 +117,9 @@ public class TicketOffice {
                 .filter(event -> event.getStartsAt().isAfter(now))
                 .sorted(Comparator.comparing(Event::getStartsAt))
                 .toList();
+    }
+
+    // One $group result: the event id (MongoDB's _id) and the summed seats.
+    private record SeatsPerEvent(String id, int seats) {
     }
 }

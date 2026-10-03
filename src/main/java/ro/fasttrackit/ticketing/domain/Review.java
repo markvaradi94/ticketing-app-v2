@@ -15,16 +15,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 @EqualsAndHashCode(of = "id")
-public class Event {
+public class Review {
     private String id;
-    private String name;
-    private Venue venue;
-    private LocalDateTime startsAt;
-    private int capacity;
-    private int bookedSeats;
-    private Long version;
-
-    public int availableSeats() {
-        return capacity - bookedSeats;
-    }
+    private String eventId;
+    private String author;
+    private int rating;
+    private String comment;
+    private LocalDateTime createdAt;
 }

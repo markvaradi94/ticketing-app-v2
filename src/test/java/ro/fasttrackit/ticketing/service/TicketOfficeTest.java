@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -32,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doAnswer;
 
 /**
  * Persistence test (real MongoDB in a Testcontainer, {@code @DataMongoTest} plus the service): checks the booking
@@ -52,11 +55,15 @@ class TicketOfficeTest {
     @Autowired
     private TicketOffice office;
 
-    @Autowired
+    // A spy calls the real repository; one test uses it to change the event between book's load and save.
+    @MockitoSpyBean
     private EventRepository eventRepository;
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     @BeforeEach
     void emptyCollections() {
@@ -145,6 +152,23 @@ class TicketOfficeTest {
         assertInstanceOf(BookingResult.Confirmed.class, first);
         assertInstanceOf(BookingResult.Confirmed.class, second);
         assertEquals(5, office.findEvent("e1").orElseThrow().getBookedSeats());
+    }
+
+    @Test
+    void eventChangedBetweenLoadAndSaveIsAConflict() {
+        given(event("e1", 10, 0));
+        // book() loads the event; before it saves, someone else books 4 seats and saves a newer version.
+        doAnswer(invocation -> {
+            EventDocument loaded = mongoTemplate.findById("e1", EventDocument.class);
+            mongoTemplate.save(loaded.toBuilder().bookedSeats(loaded.getBookedSeats() + 4).build());
+            return Optional.of(loaded);
+        }).when(eventRepository).findById("e1");
+
+        BookingResult result = office.book(new BookingRequest("e1", "ana@mail.ro", 2));
+
+        assertEquals(new BookingResult.Conflict("e1"), result);
+        assertEquals(4, mongoTemplate.findById("e1", EventDocument.class).getBookedSeats());
+        assertEquals(0, bookingRepository.count());
     }
 
     @Test

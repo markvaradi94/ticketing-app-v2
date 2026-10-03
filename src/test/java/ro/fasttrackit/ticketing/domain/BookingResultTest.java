@@ -40,4 +40,10 @@ class BookingResultTest {
 
         assertEquals("Event e1 already started at 2026-10-01T19:00", result.describe());
     }
+
+    @Test
+    void describesConflict() {
+        assertEquals("Event e1 was booked by someone else at the same time, please try again",
+                new BookingResult.Conflict("e1").describe());
+    }
 }

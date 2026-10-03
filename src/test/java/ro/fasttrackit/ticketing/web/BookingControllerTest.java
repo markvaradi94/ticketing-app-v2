@@ -106,6 +106,18 @@ class BookingControllerTest {
     }
 
     @Test
+    void lostRaceIsConflictAskingToTryAgain() throws Exception {
+        when(ticketOffice.book(VALID_REQUEST)).thenReturn(new BookingResult.Conflict("e1"));
+
+        mockMvc.perform(post("/events/e1/bookings").contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.detail").value(containsString("e1")))
+                .andExpect(jsonPath("$.detail").value(containsString("try again")));
+    }
+
+    @Test
     void blankEmailIsBadRequestProblemDetail() throws Exception {
         assertInvalidBooking("""
                 {"customerEmail":"","seats":2}""");

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
@@ -28,6 +29,8 @@ public class EventDocument {
     private LocalDateTime startsAt;
     private int capacity;
     private int bookedSeats;
+    @Version
+    private Long version;
 
     public static EventDocument from(Event event) {
         return EventDocument.builder()
@@ -37,6 +40,7 @@ public class EventDocument {
                 .startsAt(event.getStartsAt())
                 .capacity(event.getCapacity())
                 .bookedSeats(event.getBookedSeats())
+                .version(event.getVersion())
                 .build();
     }
 
@@ -48,6 +52,7 @@ public class EventDocument {
                 .startsAt(startsAt)
                 .capacity(capacity)
                 .bookedSeats(bookedSeats)
+                .version(version)
                 .build();
     }
 }

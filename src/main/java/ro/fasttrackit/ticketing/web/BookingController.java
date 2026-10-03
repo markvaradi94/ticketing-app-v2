@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ro.fasttrackit.ticketing.domain.Booking;
 import ro.fasttrackit.ticketing.domain.BookingResult.AlreadyStarted;
 import ro.fasttrackit.ticketing.domain.BookingResult.Confirmed;
+import ro.fasttrackit.ticketing.domain.BookingResult.Conflict;
 import ro.fasttrackit.ticketing.domain.BookingResult.SoldOut;
 import ro.fasttrackit.ticketing.domain.BookingResult.UnknownEvent;
 import ro.fasttrackit.ticketing.service.TicketOffice;
@@ -41,6 +42,8 @@ public class BookingController {
                     problem(CONFLICT, "Event " + id + " has only " + available + " seats left", Map.of("availableSeats", available));
             case AlreadyStarted(String id, LocalDateTime startsAt) ->
                     problem(CONFLICT, "Event " + id + " already started", Map.of("startsAt", startsAt));
+            case Conflict(String id) ->
+                    problem(CONFLICT, "Event " + id + " was booked by someone else at the same time, please try again", Map.of());
         };
     }
 

@@ -24,6 +24,7 @@ class DocumentMappingTest {
                 .startsAt(LocalDateTime.of(2030, 6, 12, 20, 0))
                 .capacity(500)
                 .bookedSeats(12)
+                .version(3L)
                 .build();
 
         Event mapped = EventDocument.from(event).toDomain();
@@ -34,6 +35,7 @@ class DocumentMappingTest {
         assertEquals(event.getStartsAt(), mapped.getStartsAt());
         assertEquals(event.getCapacity(), mapped.getCapacity());
         assertEquals(event.getBookedSeats(), mapped.getBookedSeats());
+        assertEquals(event.getVersion(), mapped.getVersion());
     }
 
     @Test
