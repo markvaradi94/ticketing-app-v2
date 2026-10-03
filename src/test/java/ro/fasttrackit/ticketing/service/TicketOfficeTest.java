@@ -17,6 +17,7 @@ import ro.fasttrackit.ticketing.domain.Venue;
 import ro.fasttrackit.ticketing.persistence.BookingRepository;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
+import ro.fasttrackit.ticketing.web.CreateEventRequest;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -131,6 +132,7 @@ class TicketOfficeTest {
         assertEquals(2, booking.getSeats());
         assertNotNull(booking.getBookedAt());
         assertEquals(12, office.findEvent("e1").orElseThrow().getBookedSeats());
+        assertTrue(bookingRepository.existsById(booking.getId()));
     }
 
     @Test
@@ -153,6 +155,9 @@ class TicketOfficeTest {
                 () -> office.addEvent(event("e1", 50, 0)));
 
         assertTrue(exception.getMessage().contains("e1"));
+        Event stored = office.findEvent("e1").orElseThrow();
+        assertEquals(100, stored.getCapacity());
+        assertEquals(0, stored.getBookedSeats());
     }
 
     @Test
@@ -290,7 +295,25 @@ class TicketOfficeTest {
                 () -> office.addEvent(event("e1", 50, 0)));
 
         assertTrue(exception.getMessage().contains("e1"));
-        assertEquals(100, office.findEvent("e1").orElseThrow().getCapacity());
+        Event stored = office.findEvent("e1").orElseThrow();
+        assertEquals(100, stored.getCapacity());
+        assertEquals(10, stored.getBookedSeats());
+    }
+
+    @Test
+    void eventCreatedFromARequestReadsBackAsStored() {
+        LocalDateTime startsAt = LocalDateTime.of(2030, 6, 12, 20, 0, 0, 123_456_789);
+        Event added = new CreateEventRequest("Rock Night", "BT Arena", "Cluj", startsAt, 500).toDomain("e1");
+
+        office.addEvent(added);
+
+        Event found = office.findEvent("e1").orElseThrow();
+        assertEquals(LocalDateTime.of(2030, 6, 12, 20, 0, 0, 123_000_000), added.getStartsAt());
+        assertEquals(added.getStartsAt(), found.getStartsAt());
+        assertEquals(added.getName(), found.getName());
+        assertEquals(added.getVenue(), found.getVenue());
+        assertEquals(added.getCapacity(), found.getCapacity());
+        assertEquals(added.getBookedSeats(), found.getBookedSeats());
     }
 
     @Test

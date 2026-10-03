@@ -8,6 +8,7 @@ import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 public record CreateEventRequest(@NotBlank String name, @NotBlank String venueName, @NotBlank String city,
                                  @NotNull @Future LocalDateTime startsAt, @Positive int capacity) {
@@ -17,7 +18,7 @@ public record CreateEventRequest(@NotBlank String name, @NotBlank String venueNa
                 .id(id)
                 .name(name)
                 .venue(new Venue(venueName, city))
-                .startsAt(startsAt)
+                .startsAt(startsAt.truncatedTo(ChronoUnit.MILLIS))
                 .capacity(capacity)
                 .bookedSeats(0)
                 .build();
