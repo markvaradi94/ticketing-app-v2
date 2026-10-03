@@ -1,7 +1,9 @@
 package ro.fasttrackit.ticketing.messaging;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Message;
@@ -21,6 +23,7 @@ import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
 import ro.fasttrackit.ticketing.service.TicketOffice;
+import ro.fasttrackit.ticketing.web.CorrelationIdFilter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -73,6 +76,11 @@ class RabbitBookingEventPublisherTest {
                 .with(MessagingConfig.BOOKING_CONFIRMED));
     }
 
+    @AfterEach
+    void clearTheMdc() {
+        MDC.clear();
+    }
+
     @Test
     void confirmedBookingPublishesOneJsonMessageWithTheAgreedFields() {
         office.addEvent(Event.builder()
@@ -84,12 +92,15 @@ class RabbitBookingEventPublisherTest {
                 .bookedSeats(0)
                 .build());
 
+        // As inside an HTTP request: CorrelationIdFilter has put the request's id in the MDC.
+        MDC.put(CorrelationIdFilter.MDC_KEY, "corr-42");
         BookingResult result = office.book(new BookingRequest("rock-cluj", "ana@mail.ro", 2));
         Booking booking = assertInstanceOf(BookingResult.Confirmed.class, result).booking();
 
         Message message = rabbitTemplate.receive(QUEUE, 5_000);
         assertNotNull(message, "no message published");
         assertEquals("application/json", message.getMessageProperties().getContentType());
+        assertEquals("corr-42", message.getMessageProperties().getHeader(CorrelationIdFilter.HEADER));
         JsonNode json = jsonMapper.readTree(message.getBody());
         assertEquals(booking.getId(), json.get("bookingId").asString());
         assertEquals("rock-cluj", json.get("eventId").asString());

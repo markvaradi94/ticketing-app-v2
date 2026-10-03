@@ -39,6 +39,15 @@ public class Routes {
                 .build();
     }
 
+    @Bean
+    RouterFunction<ServerResponse> notificationsRoute(GatewayProperties properties) {
+        return route("notifications")
+                .route(path("/notifications/**"), http())
+                .before(uri(properties.notificationsUri()))
+                .filter(perClientRateLimit(properties.rateLimit()))
+                .build();
+    }
+
     private static HandlerFilterFunction<ServerResponse, ServerResponse> perClientRateLimit(GatewayProperties.RateLimit limit) {
         return rateLimit(config -> config
                 .setCapacity(limit.capacity())

@@ -10,7 +10,7 @@ import java.time.Duration;
  * local runs, Compose and Cloud Run.
  */
 @ConfigurationProperties("gateway")
-public record GatewayProperties(URI ticketingUri, RateLimit rateLimit) {
+public record GatewayProperties(URI ticketingUri, URI notificationsUri, RateLimit rateLimit) {
 
     public record RateLimit(long capacity, Duration period) {
     }

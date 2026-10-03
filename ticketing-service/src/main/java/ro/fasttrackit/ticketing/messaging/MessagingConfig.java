@@ -1,10 +1,13 @@
 package ro.fasttrackit.ticketing.messaging;
 
+import org.slf4j.MDC;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import ro.fasttrackit.ticketing.web.CorrelationIdFilter;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -25,5 +28,18 @@ public class MessagingConfig {
     @Bean
     MessageConverter jsonMessageConverter(JsonMapper jsonMapper) {
         return new JacksonJsonMessageConverter(jsonMapper);
+    }
+
+    // The queue is notification-service's only inbound link, so the request's correlation id travels as a message
+    // header, under the same name as the HTTP header.
+    @Bean
+    RabbitTemplateCustomizer correlationIdHeader() {
+        return template -> template.addBeforePublishPostProcessors(message -> {
+            String correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+            if (correlationId != null) {
+                message.getMessageProperties().setHeader(CorrelationIdFilter.HEADER, correlationId);
+            }
+            return message;
+        });
     }
 }

@@ -2,13 +2,15 @@ package ro.fasttrackit.notification;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -20,17 +22,21 @@ import java.time.Duration;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration test (full Spring context on RabbitMQ and MongoDB Testcontainers): messages are published to
  * ticketing's exchange as raw JSON, exactly as ticketing sends them (with its {@code __TypeId__} header), and the
  * listener consumes them. A duplicated delivery stores one notification; an unreadable or invalid message lands in
- * the dead-letter queue.
+ * the dead-letter queue. The correlation id in a message's header shows up in the log lines it causes, and not in
+ * the next message's.
  */
 @SpringBootTest
 @Testcontainers
+@ExtendWith(OutputCaptureExtension.class)
 class BookingConfirmedListenerTest {
 
     @Container
@@ -66,11 +72,25 @@ class BookingConfirmedListenerTest {
     }
 
     private void publish(String json) {
-        Message message = MessageBuilder.withBody(json.getBytes(StandardCharsets.UTF_8))
-                .setContentType(MessageProperties.CONTENT_TYPE_JSON)
-                .setHeader("__TypeId__", "ro.fasttrackit.ticketing.domain.BookingConfirmed")
-                .build();
+        publish(json, null);
+    }
+
+    private void publish(String json, String correlationId) {
+        MessageProperties properties = new MessageProperties();
+        properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+        properties.setHeader("__TypeId__", "ro.fasttrackit.ticketing.domain.BookingConfirmed");
+        if (correlationId != null) {
+            properties.setHeader(CorrelationIdFilter.HEADER, correlationId);
+        }
+        Message message = new Message(json.getBytes(StandardCharsets.UTF_8), properties);
         rabbitTemplate.send(MessagingConfig.EXCHANGE, MessagingConfig.BOOKING_CONFIRMED, message);
+    }
+
+    private static String lineAbout(CapturedOutput output, String bookingId) {
+        return output.getOut().lines()
+                .filter(line -> line.contains("Received BookingConfirmed for booking " + bookingId))
+                .findFirst()
+                .orElse("");
     }
 
     @Test
@@ -93,6 +113,16 @@ class BookingConfirmedListenerTest {
         await().atMost(WAIT).until(() -> notifications.existsById("b-2"));
         assertEquals(2, notifications.count());
         assertNull(rabbitTemplate.receive(MessagingConfig.DEAD_LETTER_QUEUE, 500), "the duplicate was dead-lettered");
+    }
+
+    @Test
+    void logsTheMessagesCorrelationIdAndDoesNotCarryItToTheNextMessage(CapturedOutput output) {
+        publish(bookingConfirmed("b-1", 2), "corr-from-ticketing");
+        publish(bookingConfirmed("b-2", 1));
+
+        await().atMost(WAIT).until(() -> !lineAbout(output, "b-2").isEmpty());
+        assertTrue(lineAbout(output, "b-1").contains("[corr-from-ticketing]"), lineAbout(output, "b-1"));
+        assertFalse(lineAbout(output, "b-2").contains("corr-from-ticketing"), lineAbout(output, "b-2"));
     }
 
     @Test

@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.data.mongodb)
     implementation(libs.spring.boot.starter.amqp)
+    implementation(libs.spring.boot.starter.actuator)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
