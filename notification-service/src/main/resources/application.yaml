@@ -6,6 +6,11 @@ spring:
     name: notification
   mongodb:
     database: notifications
+  rabbitmq:
+    listener:
+      simple:
+        # A message that fails is dead-lettered, never requeued in a loop.
+        default-requeue-rejected: false
   mvc:
     problemdetails:
       enabled: true
