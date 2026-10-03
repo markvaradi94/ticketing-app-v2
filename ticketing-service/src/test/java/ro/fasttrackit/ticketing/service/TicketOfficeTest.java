@@ -7,6 +7,7 @@ import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -16,12 +17,12 @@ import ro.fasttrackit.ticketing.domain.BookingRequest;
 import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
-import ro.fasttrackit.ticketing.messaging.LoggingBookingEventPublisher;
 import ro.fasttrackit.ticketing.persistence.BookingRepository;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
 import ro.fasttrackit.ticketing.persistence.MongoBookingStore;
 import ro.fasttrackit.ticketing.persistence.MongoEventStore;
+import ro.fasttrackit.ticketing.service.port.BookingEventPublisher;
 import ro.fasttrackit.ticketing.web.CreateEventRequest;
 
 import java.time.LocalDateTime;
@@ -45,13 +46,17 @@ import static org.mockito.Mockito.doAnswer;
  * rules and the queries in {@link TicketOffice} through the MongoDB adapters.
  */
 @DataMongoTest
-@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class, LoggingBookingEventPublisher.class})
+@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class})
 @Testcontainers
 class TicketOfficeTest {
 
     @Container
     @ServiceConnection
     static MongoDBContainer mongo = new MongoDBContainer("mongo:8.0");
+
+    // Publishing is tested on its own (RabbitBookingEventPublisherTest); here it only needs a bean.
+    @MockitoBean
+    private BookingEventPublisher publisher;
 
     // MongoDB stores dates with millisecond precision, so the fixtures use the same.
     private static final LocalDateTime NOW = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);

@@ -6,5 +6,11 @@ services:
     volumes:
       - mongodb-data:/data/db
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
 volumes:
   mongodb-data:

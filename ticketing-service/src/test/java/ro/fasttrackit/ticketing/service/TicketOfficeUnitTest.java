@@ -58,8 +58,8 @@ class TicketOfficeUnitTest {
         BookingResult result = office.book(new BookingRequest("e1", "ana@example.com", 2));
 
         Booking booking = assertInstanceOf(BookingResult.Confirmed.class, result).booking();
-        assertEquals(List.of(new BookingConfirmed(
-                booking.getId(), "e1", "ana@example.com", 2, booking.getBookedAt())), publisher.published);
+        assertEquals(List.of(new BookingConfirmed(booking.getId(), "e1", "Concert e1", IN_A_WEEK,
+                "ana@example.com", 2, booking.getBookedAt())), publisher.published);
         assertEquals(booking.getBookedAt(), bookings.stored.get(booking.getId()).getBookedAt());
     }
 
@@ -112,8 +112,8 @@ class TicketOfficeUnitTest {
         BookingResult result = office.book(new BookingRequest("e1", "ana@example.com", 2));
 
         Booking booking = assertInstanceOf(BookingResult.Confirmed.class, result).booking();
-        assertEquals(List.of(new BookingConfirmed(
-                booking.getId(), "e1", "ana@example.com", 2, booking.getBookedAt())), publisher.published);
+        assertEquals(List.of(new BookingConfirmed(booking.getId(), "e1", "Concert e1", IN_A_WEEK,
+                "ana@example.com", 2, booking.getBookedAt())), publisher.published);
         assertEquals(1, bookings.stored.size());
         assertEquals(3, events.findById("e1").orElseThrow().getBookedSeats());
     }

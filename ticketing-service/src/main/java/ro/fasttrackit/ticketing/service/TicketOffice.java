@@ -65,7 +65,7 @@ public class TicketOffice {
                 .build();
         bookings.save(booking);
         // Published once, after the save: a Conflict returns above, before anything is saved or published.
-        publisher.publish(BookingConfirmed.from(booking));
+        publisher.publish(BookingConfirmed.from(booking, event));
 
         return new BookingResult.Confirmed(booking);
     }

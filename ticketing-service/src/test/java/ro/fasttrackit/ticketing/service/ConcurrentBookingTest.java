@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -13,13 +14,13 @@ import ro.fasttrackit.ticketing.domain.BookingRequest;
 import ro.fasttrackit.ticketing.domain.BookingResult;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
-import ro.fasttrackit.ticketing.messaging.LoggingBookingEventPublisher;
 import ro.fasttrackit.ticketing.persistence.BookingDocument;
 import ro.fasttrackit.ticketing.persistence.BookingRepository;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
 import ro.fasttrackit.ticketing.persistence.MongoBookingStore;
 import ro.fasttrackit.ticketing.persistence.MongoEventStore;
+import ro.fasttrackit.ticketing.service.port.BookingEventPublisher;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -40,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link EventDocument} and it fails.
  */
 @DataMongoTest
-@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class, LoggingBookingEventPublisher.class})
+@Import({TicketOffice.class, MongoEventStore.class, MongoBookingStore.class})
 @Testcontainers
 class ConcurrentBookingTest {
 
@@ -50,6 +51,10 @@ class ConcurrentBookingTest {
     @Container
     @ServiceConnection
     static MongoDBContainer mongo = new MongoDBContainer("mongo:8.0");
+
+    // Publishing is tested on its own (RabbitBookingEventPublisherTest); here it only needs a bean.
+    @MockitoBean
+    private BookingEventPublisher publisher;
 
     @Autowired
     private TicketOffice office;
