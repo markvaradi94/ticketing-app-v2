@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -157,17 +158,22 @@ class TicketOfficeTest {
     @Test
     void eventChangedBetweenLoadAndSaveIsAConflict() {
         given(event("e1", 10, 0));
-        // book() loads the event; before it saves, someone else books 4 seats and saves a newer version.
+        // Simulates a concurrent booking: right after book() loads the event (the first findById), someone else
+        // books 4 seats and saves a newer version, so book() then saves a stale copy. Later calls only read.
+        // The answer reads through MongoTemplate because a spied Spring Data repository can't callRealMethod().
+        AtomicBoolean firstLoad = new AtomicBoolean(true);
         doAnswer(invocation -> {
             EventDocument loaded = mongoTemplate.findById("e1", EventDocument.class);
-            mongoTemplate.save(loaded.toBuilder().bookedSeats(loaded.getBookedSeats() + 4).build());
+            if (firstLoad.getAndSet(false)) {
+                mongoTemplate.save(loaded.toBuilder().bookedSeats(loaded.getBookedSeats() + 4).build());
+            }
             return Optional.of(loaded);
         }).when(eventRepository).findById("e1");
 
         BookingResult result = office.book(new BookingRequest("e1", "ana@mail.ro", 2));
 
         assertEquals(new BookingResult.Conflict("e1"), result);
-        assertEquals(4, mongoTemplate.findById("e1", EventDocument.class).getBookedSeats());
+        assertEquals(4, office.findEvent("e1").orElseThrow().getBookedSeats());
         assertEquals(0, bookingRepository.count());
     }
 

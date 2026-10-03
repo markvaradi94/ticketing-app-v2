@@ -25,6 +25,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -107,7 +108,9 @@ class ReviewServiceTest {
     void reviewWithoutACommentIsStored() {
         Review review = reviewService.addReview("e1", "ana", 3, null).orElseThrow();
 
-        assertEquals(List.of(review), reviewService.reviewsFor("e1"));
+        List<Review> stored = reviewService.reviewsFor("e1");
+        assertEquals(List.of(review), stored);
+        assertNull(stored.getFirst().getComment());
     }
 
     @Test

@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.index.IndexField;
+import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -34,7 +36,10 @@ class TicketingApplicationTest {
 
     @Test
     void reviewsAreIndexedByEventId() {
-        assertTrue(mongoTemplate.indexOps("reviews").getIndexInfo().stream()
-                .anyMatch(index -> index.isIndexForFields(List.of("eventId"))));
+        List<IndexInfo> indexes = mongoTemplate.indexOps("reviews").getIndexInfo();
+        assertTrue(indexes.stream().anyMatch(index -> index.isIndexForFields(List.of("eventId"))),
+                () -> "expected an index on reviews.eventId, found index keys: " + indexes.stream()
+                        .map(index -> index.getIndexFields().stream().map(IndexField::getKey).toList())
+                        .toList());
     }
 }
