@@ -1,0 +1,11 @@
+# Allow-list: the build context holds only what Gradle needs to build the services.
+*
+!gradlew
+!gradle/
+!settings.gradle.kts
+!build.gradle.kts
+!ticketing-service/
+!notification-service/
+!api-gateway/
+**/build/
+**/.gradle/
