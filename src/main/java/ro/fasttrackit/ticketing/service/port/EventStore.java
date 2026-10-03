@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The events booking needs, in the domain's language. The adapter decides how they are stored.
+ * What the booking use case needs to read and store events, in the domain's language. The adapter decides how
+ * they are stored.
  */
 public interface EventStore {
 
@@ -14,15 +15,26 @@ public interface EventStore {
 
     List<Event> findAll();
 
+    /**
+     * Stores a new event. An id that already exists fails with an exception from the store, so callers check
+     * {@link #existsById} first.
+     */
     void insert(Event event);
 
     boolean existsById(String id);
 
     List<Event> findByCityIgnoreCase(String city);
 
-    /** The {@code n} events with the most booked seats; {@code n} must be greater than zero. */
+    /**
+     * The first {@code n} events ordered by booked seats descending, then name ascending, then id ascending.
+     * {@code n} must be greater than zero.
+     */
     List<Event> topByBookedSeats(int n);
 
-    /** Saves the event; returns {@code false} when someone else changed it first (a lost race). */
+    /**
+     * Saves the event conditionally. The event must carry the version it was read with; that version is what makes
+     * the save conditional. Returns {@code false} when someone else changed the event first (a lost race), or when
+     * it no longer exists. A {@code null} version means the event is new, and it is inserted.
+     */
     boolean trySave(Event event);
 }

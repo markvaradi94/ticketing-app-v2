@@ -6,10 +6,12 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The bookings booking needs, in the domain's language. The adapter decides how they are stored.
+ * What the booking use case needs to read and store bookings, in the domain's language. The adapter decides how
+ * they are stored.
  */
 public interface BookingStore {
 
+    /** Stores the booking; a booking with an id that already exists replaces the stored one. */
     void save(Booking booking);
 
     Optional<Booking> findById(String id);

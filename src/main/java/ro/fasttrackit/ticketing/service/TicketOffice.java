@@ -101,7 +101,7 @@ public class TicketOffice {
             throw new IllegalArgumentException("n must not be negative: " + n);
         }
         if (n == 0) {
-            // A store query with limit 0 may mean "no limit", so zero events is answered here.
+            // The store's topByBookedSeats requires n > 0, so zero events is answered here.
             return List.of();
         }
         return events.topByBookedSeats(n);
