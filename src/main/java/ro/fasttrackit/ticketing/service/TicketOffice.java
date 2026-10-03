@@ -2,8 +2,10 @@ package ro.fasttrackit.ticketing.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import ro.fasttrackit.ticketing.domain.Booking;
 import ro.fasttrackit.ticketing.domain.BookingRequest;
@@ -103,11 +105,11 @@ public class TicketOffice {
     }
 
     public List<Event> topEventsByBookedSeats(int n) {
-        return events.findAll().stream()
+        Query query = new Query()
+                .with(Sort.by(Sort.Direction.DESC, "bookedSeats").and(Sort.by(Sort.Direction.ASC, "name")))
+                .limit(n);
+        return mongoTemplate.find(query, EventDocument.class).stream()
                 .map(EventDocument::toDomain)
-                .sorted(Comparator.comparingInt(Event::getBookedSeats).reversed()
-                        .thenComparing(Event::getName))
-                .limit(n)
                 .toList();
     }
 
