@@ -1,0 +1,16 @@
+# The same images against Atlas and CloudAMQP:
+#   docker compose -f compose.yaml -f compose.cloud.yaml up --build
+# MONGODB_URI and CLOUDAMQP_URL come from your environment, never from a file. The local MongoDB and RabbitMQ
+# still start, unused.
+services:
+  ticketing-service:
+    environment:
+      SPRING_MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is not set}
+      SPRING_MONGODB_DATABASE: ticketing
+      SPRING_RABBITMQ_ADDRESSES: ${CLOUDAMQP_URL:?CLOUDAMQP_URL is not set}
+
+  notification-service:
+    environment:
+      SPRING_MONGODB_URI: ${MONGODB_URI:?MONGODB_URI is not set}
+      SPRING_MONGODB_DATABASE: notifications
+      SPRING_RABBITMQ_ADDRESSES: ${CLOUDAMQP_URL:?CLOUDAMQP_URL is not set}

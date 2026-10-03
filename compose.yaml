@@ -1,3 +1,5 @@
+# The whole system: docker compose up --build
+# Only MongoDB and RabbitMQ, for bootRun and tests: docker compose up -d mongodb rabbitmq
 services:
   mongodb:
     image: mongo:8.0
@@ -5,12 +7,78 @@ services:
       - "27017:27017"
     volumes:
       - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   rabbitmq:
     image: rabbitmq:4-management
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+
+  ticketing-service:
+    build:
+      context: .
+      dockerfile: ticketing-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/ticketing
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/notifications
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # The only service published to the host: clients come in through the gateway, which finds the services by
+  # their Compose names.
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      GATEWAY_TICKETING_URI: http://ticketing-service:8081
+      GATEWAY_NOTIFICATIONS_URI: http://notification-service:8082
+    depends_on:
+      ticketing-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
 volumes:
   mongodb-data:
