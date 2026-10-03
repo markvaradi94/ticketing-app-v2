@@ -1,0 +1,11 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: notification
+  mongodb:
+    database: notifications
+  mvc:
+    problemdetails:
+      enabled: true
