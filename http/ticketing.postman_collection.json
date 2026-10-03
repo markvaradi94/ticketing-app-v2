@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Ticketing API",
-    "description": "Requests for the course's ticketing-service. Start the app with the dev profile (`./gradlew :ticketing-service:bootRun --args='--spring.profiles.active=dev'`), then run the folders in order: Bookings and Reviews use the event that Events / Create an event makes.",
+    "description": "Requests for the course's ticketing-service, sent through api-gateway on port 8080. Start ticketing-service with the dev profile (`./gradlew :ticketing-service:bootRun --args='--spring.profiles.active=dev'`) and the gateway (`./gradlew :api-gateway:bootRun`), then run the folders in order: Bookings and Reviews use the event that Events / Create an event makes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
