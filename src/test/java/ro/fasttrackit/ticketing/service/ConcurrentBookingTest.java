@@ -87,8 +87,12 @@ class ConcurrentBookingTest {
                     return office.book(request);
                 }));
             }
-            assertTrue(ready.await(10, TimeUnit.SECONDS), "all threads at the start gate");
-            start.countDown();
+            try {
+                assertTrue(ready.await(10, TimeUnit.SECONDS), "all threads at the start gate");
+            } finally {
+                // Always open the gate, so a failed wait ends the test instead of hanging pool.close().
+                start.countDown();
+            }
         }
 
         long confirmed = 0;

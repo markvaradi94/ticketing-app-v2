@@ -290,7 +290,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"bookingId\", pm.response.json().id);"
+                  "if (pm.response.code === 201) { pm.collectionVariables.set(\"bookingId\", pm.response.json().id); }"
                 ]
               }
             }
@@ -505,7 +505,7 @@
                 "exec": [
                   "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
                   "pm.test(\"review of the created event\", () => pm.expect(pm.response.json().eventId).to.eql(pm.collectionVariables.get(\"eventId\")));",
-                  "pm.collectionVariables.set(\"reviewId\", pm.response.json().id);"
+                  "if (pm.response.code === 201) { pm.collectionVariables.set(\"reviewId\", pm.response.json().id); }"
                 ]
               }
             }
@@ -526,7 +526,8 @@
                 "{{eventId}}",
                 "reviews"
               ]
-            }
+            },
+            "description": "Uses the event created in Events / Create an event and the review added in Reviews / Add a review."
           },
           "event": [
             {
@@ -644,7 +645,8 @@
                 "{{eventId}}",
                 "rating"
               ]
-            }
+            },
+            "description": "Uses the event created in Events / Create an event; needs the review added in Reviews / Add a review."
           },
           "event": [
             {

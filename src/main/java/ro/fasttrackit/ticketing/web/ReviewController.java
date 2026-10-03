@@ -41,7 +41,7 @@ public class ReviewController {
     @GetMapping("/rating")
     public ResponseEntity<?> rating(@PathVariable String eventId) {
         return reviewService.ratingFor(eventId)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(summary -> ResponseEntity.ok(RatingResponse.from(summary)))
                 .orElseGet(() -> notFound(eventId));
     }
 

@@ -114,8 +114,17 @@ public class TicketOffice {
     }
 
     public List<Event> topEventsByBookedSeats(int n) {
+        if (n < 0) {
+            throw new IllegalArgumentException("n must not be negative: " + n);
+        }
+        if (n == 0) {
+            // Query.limit(0) means "no limit", so zero events is answered here.
+            return List.of();
+        }
         Query query = new Query()
-                .with(Sort.by(Sort.Direction.DESC, "bookedSeats").and(Sort.by(Sort.Direction.ASC, "name")))
+                .with(Sort.by(Sort.Direction.DESC, "bookedSeats")
+                        .and(Sort.by(Sort.Direction.ASC, "name"))
+                        .and(Sort.by(Sort.Direction.ASC, "_id")))
                 .limit(n);
         return mongoTemplate.find(query, EventDocument.class).stream()
                 .map(EventDocument::toDomain)

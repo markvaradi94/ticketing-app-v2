@@ -289,6 +289,13 @@ class TicketOfficeTest {
     }
 
     @Test
+    void topZeroEventsIsEmpty() {
+        given(event("e1", "Concert", "Cluj", NOW.plusDays(1), 100, 5));
+
+        assertTrue(office.topEventsByBookedSeats(0).isEmpty());
+    }
+
+    @Test
     void upcomingEventsInCityIgnoresCaseAndPastEvents() {
         given(event("e1", "Concert", "Cluj", NOW.plusDays(1), 100, 0),
                 event("e2", "Festival", "Cluj", NOW.minusDays(1), 100, 0),
