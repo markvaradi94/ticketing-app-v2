@@ -111,3 +111,55 @@ curl -i $TICKETING_URL/events                                                   
 curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" $TICKETING_URL/events   # 200
 gcloud run services logs read notification-service --limit 20                       # started, connected
 ```
+
+## 7. The gateway, the only public URL
+
+The gateway runs as `gateway-run`, which may call both backends (`roles/run.invoker`). With `GATEWAY_CLOUD_RUN_AUTH_ENABLED=true` it asks Cloud Run's metadata server for an ID token for each backend's URL and sends it as `Authorization: Bearer ...` (`IdentityTokens`). Any `Authorization` header from the client is replaced, never forwarded.
+
+```bash
+for service in ticketing-service notification-service; do
+  gcloud run services add-iam-policy-binding $service \
+      --member="serviceAccount:gateway-run@$PROJECT_ID.iam.gserviceaccount.com" --role=roles/run.invoker
+done
+
+TICKETING_URL=$(gcloud run services describe ticketing-service --format='value(status.url)')
+NOTIFICATIONS_URL=$(gcloud run services describe notification-service --format='value(status.url)')
+
+MSYS2_ARG_CONV_EXCL="httpGet.path=" gcloud run deploy api-gateway \
+    --image $REPO/api-gateway:session-09 \
+    --service-account gateway-run@$PROJECT_ID.iam.gserviceaccount.com \
+    --allow-unauthenticated --port 8080 --cpu 1 --memory 512Mi \
+    --min-instances 0 --max-instances 2 \
+    --set-env-vars GATEWAY_TICKETING_URI=$TICKETING_URL,GATEWAY_NOTIFICATIONS_URI=$NOTIFICATIONS_URL,GATEWAY_CLOUD_RUN_AUTH_ENABLED=true \
+    --startup-probe httpGet.path=/actuator/health/readiness,httpGet.port=8080,periodSeconds=5,timeoutSeconds=3,failureThreshold=24
+```
+
+> **New IAM bindings take a minute or two to apply.** Right after the `add-iam-policy-binding` calls, the gateway's requests can still get 403 from the backends. Wait, then try again; don't start changing the configuration.
+
+Check it end to end: the Postman collection against the public URL, and the booking's notification through the same URL.
+
+```bash
+GATEWAY_URL=$(gcloud run services describe api-gateway --format='value(status.url)')
+npx newman run http/ticketing.postman_collection.json --env-var baseUrl=$GATEWAY_URL
+curl $GATEWAY_URL/notifications
+```
+
+## 8. Costs: scale down when you're done
+
+`notification-service` is the only service that runs when nobody uses it: about $0.07 an hour (1 vCPU, 512 MiB, CPU always allocated). The others scale to zero by themselves. When you're done, scale it to zero; scale it up again before the next demo.
+
+```bash
+gcloud run services update notification-service --min-instances 0      # done for today
+gcloud run services update notification-service --min-instances 1      # before the next demo
+```
+
+To remove everything at the end of the course: delete the three services, the repository and the two secrets.
+
+```bash
+gcloud run services delete api-gateway --quiet
+gcloud run services delete ticketing-service --quiet
+gcloud run services delete notification-service --quiet
+gcloud artifacts repositories delete ticketing --location=$REGION --quiet
+gcloud secrets delete mongodb-uri --quiet
+gcloud secrets delete cloudamqp-url --quiet
+```
