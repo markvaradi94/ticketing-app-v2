@@ -54,11 +54,13 @@ public class ReviewService {
         Aggregation pipeline = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("eventId").is(eventId)),
                 Aggregation.group("eventId").avg("rating").as("averageRating").count().as("reviewCount"));
-        RatingSummary summary = Optional.ofNullable(
-                        mongoTemplate.aggregate(pipeline, ReviewDocument.class, RatingGroup.class).getUniqueMappedResult())
-                .map(group -> new RatingSummary(eventId, group.averageRating(), group.reviewCount()))
-                .orElseGet(() -> new RatingSummary(eventId, null, 0));
-        return Optional.of(summary);
+        RatingGroup group = mongoTemplate.aggregate(pipeline, ReviewDocument.class, RatingGroup.class)
+                .getUniqueMappedResult();
+        if (group == null) {
+            // No reviews yet: $group returns no document at all.
+            return Optional.of(new RatingSummary(eventId, null, 0));
+        }
+        return Optional.of(new RatingSummary(eventId, group.averageRating(), group.reviewCount()));
     }
 
     // One $group result: the event id (MongoDB's _id), the average rating and the number of reviews.
