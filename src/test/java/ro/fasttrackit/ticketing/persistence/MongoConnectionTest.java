@@ -32,6 +32,6 @@ class MongoConnectionTest {
     void savesAndReadsADocument() {
         mongoTemplate.save(new Ping("p1", "hello"));
 
-        assertEquals("hello", mongoTemplate.findById("p1", Ping.class).message());
+        assertEquals(new Ping("p1", "hello"), mongoTemplate.findById("p1", Ping.class));
     }
 }
