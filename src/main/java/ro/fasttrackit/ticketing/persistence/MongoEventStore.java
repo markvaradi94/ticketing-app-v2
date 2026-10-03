@@ -26,9 +26,7 @@ public class MongoEventStore implements EventStore {
 
     @Override
     public List<Event> findAll() {
-        return events.findAll().stream()
-                .map(EventDocument::toDomain)
-                .toList();
+        return toDomain(events.findAll());
     }
 
     @Override
@@ -43,21 +41,15 @@ public class MongoEventStore implements EventStore {
 
     @Override
     public List<Event> findByCityIgnoreCase(String city) {
-        return events.findByVenueCityIgnoreCase(city).stream()
-                .map(EventDocument::toDomain)
-                .toList();
+        return toDomain(events.findByVenueCityIgnoreCase(city));
     }
 
     @Override
     public List<Event> topByBookedSeats(int n) {
         Query query = new Query()
-                .with(Sort.by(Sort.Direction.DESC, "bookedSeats")
-                        .and(Sort.by(Sort.Direction.ASC, "name"))
-                        .and(Sort.by(Sort.Direction.ASC, "_id")))
+                .with(Sort.by(Sort.Order.desc("bookedSeats"), Sort.Order.asc("name"), Sort.Order.asc("_id")))
                 .limit(n);
-        return mongoTemplate.find(query, EventDocument.class).stream()
-                .map(EventDocument::toDomain)
-                .toList();
+        return toDomain(mongoTemplate.find(query, EventDocument.class));
     }
 
     // The @Version field makes a stale save fail; only this adapter knows Spring's exception for it.
@@ -69,5 +61,11 @@ public class MongoEventStore implements EventStore {
         } catch (OptimisticLockingFailureException lostTheRace) {
             return false;
         }
+    }
+
+    private static List<Event> toDomain(List<EventDocument> documents) {
+        return documents.stream()
+                .map(EventDocument::toDomain)
+                .toList();
     }
 }
