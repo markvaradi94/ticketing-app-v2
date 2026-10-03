@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import ro.fasttrackit.ticketing.domain.Event;
-import ro.fasttrackit.ticketing.domain.TicketOffice;
+import ro.fasttrackit.ticketing.service.TicketOffice;
 
 import java.net.URI;
 import java.time.LocalDateTime;

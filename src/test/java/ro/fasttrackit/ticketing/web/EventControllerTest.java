@@ -9,7 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ro.fasttrackit.ticketing.domain.Event;
-import ro.fasttrackit.ticketing.domain.TicketOffice;
+import ro.fasttrackit.ticketing.service.TicketOffice;
 import ro.fasttrackit.ticketing.domain.Venue;
 
 import java.time.LocalDateTime;

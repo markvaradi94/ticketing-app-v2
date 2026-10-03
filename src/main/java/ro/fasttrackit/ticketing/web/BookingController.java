@@ -16,7 +16,7 @@ import ro.fasttrackit.ticketing.domain.BookingResult.AlreadyStarted;
 import ro.fasttrackit.ticketing.domain.BookingResult.Confirmed;
 import ro.fasttrackit.ticketing.domain.BookingResult.SoldOut;
 import ro.fasttrackit.ticketing.domain.BookingResult.UnknownEvent;
-import ro.fasttrackit.ticketing.domain.TicketOffice;
+import ro.fasttrackit.ticketing.service.TicketOffice;
 
 import java.time.LocalDateTime;
 import java.util.Map;

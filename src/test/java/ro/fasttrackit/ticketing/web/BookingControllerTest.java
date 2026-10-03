@@ -10,7 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ro.fasttrackit.ticketing.domain.Booking;
 import ro.fasttrackit.ticketing.domain.BookingRequest;
 import ro.fasttrackit.ticketing.domain.BookingResult;
-import ro.fasttrackit.ticketing.domain.TicketOffice;
+import ro.fasttrackit.ticketing.service.TicketOffice;
 
 import java.time.LocalDateTime;
 import java.util.Optional;

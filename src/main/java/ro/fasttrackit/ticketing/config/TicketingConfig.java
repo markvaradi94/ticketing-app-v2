@@ -1,22 +1,29 @@
 package ro.fasttrackit.ticketing.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 import ro.fasttrackit.ticketing.domain.Event;
-import ro.fasttrackit.ticketing.domain.TicketOffice;
 import ro.fasttrackit.ticketing.domain.Venue;
+import ro.fasttrackit.ticketing.persistence.EventDocument;
+import ro.fasttrackit.ticketing.persistence.EventRepository;
 
-import java.util.List;
+@Component
+@Profile("dev")
+@RequiredArgsConstructor
+public class TicketingConfig implements ApplicationRunner {
 
-@Configuration
-public class TicketingConfig {
+    private final TicketingProperties properties;
+    private final EventRepository events;
 
-    @Bean
-    TicketOffice ticketOffice(TicketingProperties properties) {
-        List<Event> events = properties.seedEvents().stream()
+    @Override
+    public void run(ApplicationArguments args) {
+        properties.seedEvents().stream()
                 .map(TicketingConfig::toEvent)
-                .toList();
-        return new TicketOffice(events);
+                .map(EventDocument::from)
+                .forEach(events::save);
     }
 
     private static Event toEvent(TicketingProperties.SeedEvent seed) {
