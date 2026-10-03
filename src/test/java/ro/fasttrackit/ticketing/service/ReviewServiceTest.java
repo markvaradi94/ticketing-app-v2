@@ -10,6 +10,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
 import ro.fasttrackit.ticketing.domain.Event;
+import ro.fasttrackit.ticketing.domain.RatingSummary;
 import ro.fasttrackit.ticketing.domain.Review;
 import ro.fasttrackit.ticketing.domain.Venue;
 import ro.fasttrackit.ticketing.persistence.EventDocument;
@@ -30,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Persistence test (real MongoDB in a Testcontainer, {@code @DataMongoTest} plus the service): checks that
- * {@link ReviewService} stores reviews for known events only and lists them newest first.
+ * {@link ReviewService} stores reviews for known events only, lists them newest first and sums up their ratings with
+ * an aggregation.
  */
 @DataMongoTest
 @Import(ReviewService.class)
@@ -73,11 +75,15 @@ class ReviewServiceTest {
     }
 
     private void givenReview(String id, String eventId, LocalDateTime createdAt) {
+        givenReview(id, eventId, 4, createdAt);
+    }
+
+    private void givenReview(String id, String eventId, int rating, LocalDateTime createdAt) {
         reviewRepository.save(ReviewDocument.from(Review.builder()
                 .id(id)
                 .eventId(eventId)
                 .author("ana")
-                .rating(4)
+                .rating(rating)
                 .comment("nice")
                 .createdAt(createdAt)
                 .build()));
@@ -135,5 +141,36 @@ class ReviewServiceTest {
     @Test
     void eventWithoutReviewsHasAnEmptyList() {
         assertTrue(reviewService.reviewsFor("e1").isEmpty());
+    }
+
+    @Test
+    void ratingIsTheExactAverageOfTheEventsReviews() {
+        givenReview("r1", "e1", 5, NOW.minusDays(3));
+        givenReview("r2", "e1", 4, NOW.minusDays(2));
+        givenReview("r3", "e1", 4, NOW.minusDays(1));
+        givenReview("r4", "e2", 1, NOW.minusDays(2));
+        givenReview("r5", "e2", 2, NOW.minusDays(1));
+
+        RatingSummary first = reviewService.ratingFor("e1").orElseThrow();
+        RatingSummary second = reviewService.ratingFor("e2").orElseThrow();
+
+        assertEquals("e1", first.eventId());
+        assertEquals(13.0 / 3, first.averageRating(), 1e-9);
+        assertEquals(3, first.reviewCount());
+        assertEquals("e2", second.eventId());
+        assertEquals(1.5, second.averageRating(), 1e-9);
+        assertEquals(2, second.reviewCount());
+    }
+
+    @Test
+    void eventWithoutReviewsHasNoAverageAndZeroReviews() {
+        givenReview("r1", "e2", 5, NOW.minusDays(1));
+
+        assertEquals(Optional.of(new RatingSummary("e1", null, 0)), reviewService.ratingFor("e1"));
+    }
+
+    @Test
+    void unknownEventHasNoRating() {
+        assertEquals(Optional.empty(), reviewService.ratingFor("e9"));
     }
 }
