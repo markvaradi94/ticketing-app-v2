@@ -33,7 +33,16 @@ public class TicketOffice {
     private final BookingRepository bookings;
     private final MongoTemplate mongoTemplate;
 
+    // A lost race is retried once with a fresh read; a second loss is reported as a Conflict.
     public BookingResult book(BookingRequest request) {
+        BookingResult result = tryToBook(request);
+        if (result instanceof BookingResult.Conflict) {
+            result = tryToBook(request);
+        }
+        return result;
+    }
+
+    private BookingResult tryToBook(BookingRequest request) {
         EventDocument doc = events.findById(request.eventId()).orElse(null);
         if (doc == null) {
             return new BookingResult.UnknownEvent(request.eventId());

@@ -26,7 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,7 +56,7 @@ class TicketOfficeTest {
     @Autowired
     private TicketOffice office;
 
-    // A spy calls the real repository; one test uses it to change the event between book's load and save.
+    // A spy calls the real repository; two tests use it to change the event between book's load and save.
     @MockitoSpyBean
     private EventRepository eventRepository;
 
@@ -155,26 +155,43 @@ class TicketOfficeTest {
         assertEquals(5, office.findEvent("e1").orElseThrow().getBookedSeats());
     }
 
-    @Test
-    void eventChangedBetweenLoadAndSaveIsAConflict() {
-        given(event("e1", 10, 0));
-        // Simulates a concurrent booking: right after book() loads the event (the first findById), someone else
-        // books 4 seats and saves a newer version, so book() then saves a stale copy. Later calls only read.
-        // The answer reads through MongoTemplate because a spied Spring Data repository can't callRealMethod().
-        AtomicBoolean firstLoad = new AtomicBoolean(true);
+    // Simulates concurrent bookings: right after each of book()'s first `staleLoads` loads of the event, someone
+    // else books 4 seats and saves a newer version, so book() then saves a stale copy. Later loads are left alone.
+    // The answer reads through MongoTemplate because a spied Spring Data repository can't callRealMethod().
+    private void anotherBookingAfterEachOfTheFirstLoads(int staleLoads) {
+        AtomicInteger loads = new AtomicInteger();
         doAnswer(invocation -> {
             EventDocument loaded = mongoTemplate.findById("e1", EventDocument.class);
-            if (firstLoad.getAndSet(false)) {
+            if (loads.incrementAndGet() <= staleLoads) {
                 mongoTemplate.save(loaded.toBuilder().bookedSeats(loaded.getBookedSeats() + 4).build());
             }
             return Optional.of(loaded);
         }).when(eventRepository).findById("e1");
+    }
+
+    @Test
+    void eventChangedBetweenLoadAndSaveTwiceIsAConflict() {
+        given(event("e1", 10, 0));
+        anotherBookingAfterEachOfTheFirstLoads(2);
 
         BookingResult result = office.book(new BookingRequest("e1", "ana@mail.ro", 2));
 
         assertEquals(new BookingResult.Conflict("e1"), result);
-        assertEquals(4, office.findEvent("e1").orElseThrow().getBookedSeats());
+        assertEquals(8, office.findEvent("e1").orElseThrow().getBookedSeats());
         assertEquals(0, bookingRepository.count());
+    }
+
+    @Test
+    void staleSaveFollowedByAFreshOneIsConfirmed() {
+        given(event("e1", 10, 0));
+        anotherBookingAfterEachOfTheFirstLoads(1);
+
+        BookingResult result = office.book(new BookingRequest("e1", "ana@mail.ro", 2));
+
+        Booking booking = assertInstanceOf(BookingResult.Confirmed.class, result).booking();
+        assertEquals(6, office.findEvent("e1").orElseThrow().getBookedSeats());
+        assertEquals(1, bookingRepository.count());
+        assertTrue(bookingRepository.existsById(booking.getId()));
     }
 
     @Test
