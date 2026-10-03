@@ -20,6 +20,9 @@ public class TicketingConfig implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        if (events.count() > 0) {
+            return;
+        }
         properties.seedEvents().stream()
                 .map(TicketingConfig::toEvent)
                 .map(EventDocument::from)

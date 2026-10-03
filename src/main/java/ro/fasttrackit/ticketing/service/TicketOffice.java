@@ -12,16 +12,17 @@ import ro.fasttrackit.ticketing.persistence.EventDocument;
 import ro.fasttrackit.ticketing.persistence.EventRepository;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TicketOffice {
-
-    private static final String LAB = "Lab: back this with the repositories";
 
     private final EventRepository events;
     private final BookingRepository bookings;
@@ -32,7 +33,7 @@ public class TicketOffice {
             return new BookingResult.UnknownEvent(request.eventId());
         }
         Event event = doc.toDomain();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS);
         if (!event.getStartsAt().isAfter(now)) {
             return new BookingResult.AlreadyStarted(event.getId(), event.getStartsAt());
         }
@@ -58,11 +59,14 @@ public class TicketOffice {
     }
 
     public void addEvent(Event event) {
-        throw new UnsupportedOperationException(LAB);
+        if (events.existsById(event.getId())) {
+            throw new IllegalArgumentException("Duplicate event id " + event.getId());
+        }
+        events.insert(EventDocument.from(event));
     }
 
     public Optional<Booking> findBooking(String id) {
-        throw new UnsupportedOperationException(LAB);
+        return bookings.findById(id).map(BookingDocument::toDomain);
     }
 
     public Optional<Event> findEvent(String id) {
@@ -72,22 +76,36 @@ public class TicketOffice {
     public List<Event> allEvents() {
         return events.findAll().stream()
                 .map(EventDocument::toDomain)
+                .sorted(Comparator.comparing(Event::getStartsAt))
                 .toList();
     }
 
     public List<Event> eventsWithFreeSeats() {
-        throw new UnsupportedOperationException(LAB);
+        return allEvents().stream()
+                .filter(event -> event.availableSeats() > 0)
+                .toList();
     }
 
     public Map<String, Integer> bookedSeatsPerEvent() {
-        throw new UnsupportedOperationException(LAB);
+        return bookings.findAll().stream()
+                .map(BookingDocument::toDomain)
+                .collect(Collectors.groupingBy(Booking::getEventId, Collectors.summingInt(Booking::getSeats)));
     }
 
     public List<Event> topEventsByBookedSeats(int n) {
-        throw new UnsupportedOperationException(LAB);
+        return events.findAll().stream()
+                .map(EventDocument::toDomain)
+                .sorted(Comparator.comparingInt(Event::getBookedSeats).reversed()
+                        .thenComparing(Event::getName))
+                .limit(n)
+                .toList();
     }
 
     public List<Event> upcomingEventsIn(String city, LocalDateTime now) {
-        throw new UnsupportedOperationException(LAB);
+        return events.findByVenueCityIgnoreCase(city).stream()
+                .map(EventDocument::toDomain)
+                .filter(event -> event.getStartsAt().isAfter(now))
+                .sorted(Comparator.comparing(Event::getStartsAt))
+                .toList();
     }
 }

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 import ro.fasttrackit.ticketing.domain.Event;
 import ro.fasttrackit.ticketing.domain.Venue;
@@ -14,6 +15,7 @@ import ro.fasttrackit.ticketing.domain.Venue;
 import java.time.LocalDateTime;
 
 @Document("events")
+@CompoundIndex(name = "venue_city", def = "{'venue.city': 1}")
 @Getter
 @ToString
 @NoArgsConstructor
