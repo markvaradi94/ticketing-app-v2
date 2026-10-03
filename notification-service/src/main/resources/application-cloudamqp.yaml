@@ -1,0 +1,4 @@
+spring:
+  rabbitmq:
+    # The AMQP URL from the CloudAMQP console (amqps://user:password@host/vhost); amqps turns on TLS.
+    addresses: ${CLOUDAMQP_URL}
